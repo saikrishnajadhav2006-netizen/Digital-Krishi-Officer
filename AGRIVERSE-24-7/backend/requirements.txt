@@ -11,7 +11,7 @@ sentence-transformers==2.2.2
 requests==2.31.0
 pillow==10.4.0
 sqlalchemy==1.4.49
-googletrans==4.0.0-rc1
+googletrans
 python-dotenv==1.0.0
 asyncpg==0.27.0
 greenlet==2.0.2
