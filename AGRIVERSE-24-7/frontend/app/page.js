@@ -27,7 +27,8 @@ export default function Home() {
     React.useEffect(() => {
         if (typeof window !== 'undefined') {
             const user = localStorage.getItem('user');
-            if (!user) {
+            // Keep the landing page public; require a session only when entering chat.
+            if (showChat && !user) {
                 router.push('/login');
             }
 
@@ -38,7 +39,7 @@ export default function Home() {
                 setT(translations[langKey]);
             }
         }
-    }, [router]);
+    }, [router, showChat]);
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [messages, setMessages] = useState([]);
