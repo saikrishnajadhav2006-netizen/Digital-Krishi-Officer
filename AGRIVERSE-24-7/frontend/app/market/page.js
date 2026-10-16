@@ -1,85 +1,24 @@
 "use client";
-
-import React from 'react';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import Header from '../../components/Header';
-
-const MARKET_DATA = [
-    { name: "Wheat (Sharbati)", icon: "🌾", price: "₹2,125 / qt", trend: "up", change: "+1.2%", history: "Stable" },
-    { name: "Basmati Rice", icon: "🍚", price: "₹3,450 / qt", trend: "down", change: "-0.5%", history: "Volatile" },
-    { name: "Cotton (H4)", icon: "🧶", price: "₹6,200 / qt", trend: "up", change: "+2.8%", history: "Demand High" },
-    { name: "Tomato (Hybrid)", icon: "🍅", price: "₹25 / kg", trend: "down", change: "-5.0%", history: "Supply High" },
-    { name: "Potato (Agra)", icon: "🥔", price: "₹18 / kg", trend: "steady", change: "0%", history: "Stable" },
-    { name: "Onion (Nashik)", icon: "🧅", price: "₹35 / kg", trend: "up", change: "+8.5%", history: "Shortage" },
-    { name: "Sugarcane", icon: "🎋", price: "₹340 / qt", trend: "steady", change: "0%", history: "Govt Fixed" },
-    { name: "Mustard Seeds", icon: "🟡", price: "₹5,400 / qt", trend: "up", change: "+1.5%", history: "Oil Demand" },
-];
-
-import { translations } from '../../utils/translations';
-
-export default function MarketPage() {
-    const router = useRouter();
-    const [t, setT] = React.useState(translations.english);
-
-    React.useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const savedLang = localStorage.getItem('appLanguage') || 'English';
-            const langKey = savedLang.toLowerCase();
-            if (translations[langKey]) {
-                setT(translations[langKey]);
-            }
-        }
-    }, []);
-
-    return (
-        <div className="min-h-screen bg-peacock-gradient animate-fade-in-up font-sans">
-            <Header />
-            <div className="p-6">
-                {/* Back Navigation */}
-                <button onClick={() => router.back()} className="flex items-center gap-2 text-agri-darkGreen font-bold mb-4 hover:underline">
-                    <ArrowLeft size={18} /> {t.home_nav}
-                </button>
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-agri-darkGreen">{t.market_title}</h1>
-                    <p className="text-stone-600 text-sm">Real-time prices from major APMC markets</p>
-                </div>
-
-                {/* Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {MARKET_DATA.map((crop, idx) => (
-                        <div key={idx} className="bg-white/60 backdrop-blur-md border border-white/50 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-1">
-                            <div className="flex justify-between items-start mb-4">
-                                <span className="text-4xl">{crop.icon}</span>
-                                <div className={`flex items-center gap-1 text-sm font-bold px-2 py-1 rounded-full ${crop.trend === 'up' ? 'bg-green-100 text-green-700' :
-                                    crop.trend === 'down' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
-                                    }`}>
-                                    {crop.trend === 'up' && <TrendingUp size={14} />}
-                                    {crop.trend === 'down' && <TrendingDown size={14} />}
-                                    {crop.trend === 'steady' && <Minus size={14} />}
-                                    {crop.change}
-                                </div>
-                            </div>
-
-                            <h3 className="text-xl font-bold text-stone-800">{crop.name}</h3>
-                            <div className="mt-2 flex items-baseline gap-2">
-                                <span className="text-2xl font-bold text-agri-darkGreen">{crop.price}</span>
-                            </div>
-
-                            <div className="mt-4 pt-4 border-t border-stone-200">
-                                <div className="flex justify-between text-xs text-stone-500">
-                                    <span>Market Status:</span>
-                                    <span className="font-semibold text-stone-700">{crop.history}</span>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                <p className="text-center text-stone-500 text-xs mt-12 bg-white/30 py-2 rounded-full inline-block px-6 left-1/2 relative -translate-x-1/2">
-                    Last updated: Just now • Source: National Agriculture Market (eNAM)
-                </p>
-            </div>
-        </div>
-    );
-}
+import React,{useCallback,useState} from "react";
+import {MapPin,Search,Navigation,ArrowLeft,Store,Sprout,TrendingUp,LocateFixed,AlertCircle} from "lucide-react";
+import Link from "next/link";
+import Header from "../../components/Header";
+const API=(process.env.NEXT_PUBLIC_API_BASE_URL||"http://127.0.0.1:8000").replace(/\/$/,"");
+async function get(path){const r=await fetch(API+path,{cache:"no-store"});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.detail||"Request failed");return d}
+const distance=(a,b)=>{const rad=n=>n*Math.PI/180,dl=rad(b.lat-a.lat),dn=rad(b.lon-a.lon),x=Math.sin(dl/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dn/2)**2;return 6371*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))};
+export default function MarketPage(){
+const [query,Q]=useState(""),[markets,M]=useState([]),[selected,S]=useState(null),[prices,P]=useState([]),[priceMsg,PM]=useState(""),[busy,B]=useState(false),[error,E]=useState(""),[radius,R]=useState("50"),[searched,SE]=useState(false);
+const nearby=useCallback(async c=>{B(true);E("");SE(true);S(null);try{const d=await get(`/api/v1/mandis/nearby?lat=${c.lat}&lon=${c.lon}&radius_km=${radius}`);const rows=d.items.map(x=>({...x,distance_km:distance(c,x)})).sort((a,b)=>a.distance_km-b.distance_km);M(rows);if(!rows.length)E("No mapped markets found. Try a larger radius or search your town.");}catch(e){M([]);E(e.message)}finally{B(false)}},[radius]);
+function nearMe(){E("");if(!navigator.geolocation){E("Location is not available in this browser. Search for your town.");return}B(true);navigator.geolocation.getCurrentPosition(p=>nearby({lat:p.coords.latitude,lon:p.coords.longitude}),e=>{B(false);E(e.code===1?"Location permission was denied. Search for a town or district instead.":"Could not get your location. Check location settings or search manually.")},{timeout:12000,maximumAge:300000})}
+async function search(e){e.preventDefault();if(query.trim().length<2){E("Enter a town, district, or market name.");return}B(true);E("");SE(true);try{const d=await get("/api/v1/mandis/search?query="+encodeURIComponent(query.trim()));M(d.items);if(!d.items.length)E("No mapped places found. Try a nearby town or district.")}catch(e){M([]);E(e.message)}finally{B(false)}}
+async function choose(m){S(m);P([]);PM("Loading reported prices…");try{const d=await get(`/api/v1/mandis/${encodeURIComponent(m.id)}/prices?market=${encodeURIComponent(m.name)}`);P(d.items||[]);PM(d.status==="unconfigured"?d.message:d.items?.length?`Source: ${d.source} · Retrieved ${d.retrieved_at||""}`:"No matching price records from the configured source.")}catch(e){PM(e.message)}}
+return <main className="min-h-screen bg-[#f7faf4] text-[#173b2a]"><Header/><div className="mx-auto max-w-7xl px-4 py-7 sm:px-7 lg:px-10"><Link href="/" className="mb-5 inline-flex items-center gap-2 text-sm font-bold text-emerald-800"><ArrowLeft size={17}/> Back to home</Link>
+<section className="mb-7 rounded-[2rem] bg-gradient-to-br from-[#174d32] via-[#216a3e] to-[#65a30d] p-6 text-white shadow-lg sm:p-9"><p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold uppercase tracking-widest"><Store size={14}/> AGRIVERSE · Mandi</p><div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between"><div><h1 className="text-3xl font-black leading-tight sm:text-5xl">Find a market.<br/>Know before you sell.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-white/85 sm:text-base">Find mapped markets, open directions, and check reported crop prices when official data is available.</p></div><button onClick={nearMe} disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-5 py-3 font-bold text-emerald-900 hover:bg-lime-100 disabled:opacity-60"><LocateFixed size={18}/> Find mandis near me</button></div></section>
+<div className="grid gap-6 lg:grid-cols-[.92fr_1.08fr]"><section className="space-y-4"><form onSubmit={search} className="flex gap-2 rounded-2xl border border-emerald-900/10 bg-white p-2 shadow-sm"><Search className="ml-2 mt-3 shrink-0 text-emerald-700" size={20}/><input aria-label="Search town or mandi" value={query} onChange={e=>Q(e.target.value)} placeholder="Enter town, district or mandi…" className="min-w-0 flex-1 bg-transparent px-1 py-3 text-sm outline-none"/><button disabled={busy} className="rounded-xl bg-emerald-800 px-4 py-2 text-sm font-bold text-white">Search</button></form>
+<div className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm"><span className="font-semibold text-stone-600">Search distance</span><select value={radius} onChange={e=>R(e.target.value)} className="rounded-lg border p-2 font-bold"><option value="10">10 km</option><option value="25">25 km</option><option value="50">50 km</option><option value="100">100 km</option><option value="200">200 km</option></select></div>
+<div className="flex items-center justify-between pt-1"><h2 className="text-xl font-extrabold">Markets to explore</h2><span className="text-xs text-stone-500">{markets.length} found</span></div>
+{busy&&<p className="rounded-2xl bg-white p-5 text-sm">Finding market information…</p>}{!busy&&!searched&&<div className="rounded-2xl border border-dashed bg-white p-7 text-center"><MapPin size={30} className="mx-auto mb-3 text-emerald-700"/><b>Where do you want to sell?</b><p className="mt-2 text-sm text-stone-600">Allow location to look nearby, or search for your town. You stay in control of location permission.</p></div>}
+{!busy&&markets.map(m=><button key={m.id} onClick={()=>choose(m)} className={`block w-full rounded-2xl border p-4 text-left transition hover:shadow-md ${selected?.id===m.id?"border-emerald-600 bg-emerald-50":"border-stone-100 bg-white"}`}><span className="flex gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-lime-100 text-emerald-800"><Store size={21}/></span><span className="min-w-0 flex-1"><b className="block">{m.name}</b><span className="mt-1 block text-sm text-stone-500">{m.address}</span><span className="mt-2 block text-xs font-bold text-emerald-800">{m.distance_km!=null?`${m.distance_km.toFixed(1)} km away · `:""}{m.source}</span></span></span></button>)}
+{!busy&&error&&<p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"><AlertCircle className="mr-2 inline" size={17}/>{error}</p>}</section>
+<section className="space-y-5"><div className="overflow-hidden rounded-2xl border bg-white shadow-sm"><div className="border-b p-4"><h2 className="font-extrabold">Market map</h2><p className="mt-1 text-xs text-stone-500">Select a market to view its location</p></div>{selected?<iframe title={`Map showing ${selected.name}`} className="h-[330px] w-full border-0 sm:h-[390px]" loading="lazy" src={`https://www.openstreetmap.org/export/embed.html?bbox=${selected.lon-.04}%2C${selected.lat-.03}%2C${selected.lon+.04}%2C${selected.lat+.03}&layer=mapnik&marker=${selected.lat}%2C${selected.lon}`}/>:<div className="grid h-[330px] place-items-center bg-gradient-to-br from-lime-50 to-emerald-100 p-8 text-center sm:h-[390px]"><div><MapPin size={36} className="mx-auto mb-4 text-emerald-800"/><b>Your selected market appears here</b><p className="mt-2 text-sm text-stone-600">Search or find nearby markets, then tap a result.</p></div></div>}{selected&&<div className="flex flex-wrap items-center justify-between gap-3 p-4"><div><b>{selected.name}</b><p className="text-xs text-stone-500">{selected.lat.toFixed(4)}, {selected.lon.toFixed(4)}</p></div><a target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/directions?to=${selected.lat}%2C${selected.lon}`} className="inline-flex items-center gap-2 rounded-full bg-emerald-800 px-4 py-2.5 text-sm font-bold text-white"><Navigation size={16}/> Directions</a></div>}</div>
+<div className="rounded-2xl border bg-white p-5 shadow-sm sm:p-6"><div className="flex items-start gap-3"><TrendingUp size={24} className="text-emerald-700"/><div><h2 className="text-xl font-extrabold">Vegetable & crop prices</h2><p className="mt-1 text-sm text-stone-600">{selected?`Reported prices for ${selected.name}`:"Choose a market to check available prices."}</p></div></div>{selected&&<div className="mt-4 space-y-3">{priceMsg&&<p className="rounded-xl bg-stone-50 p-3 text-sm leading-6 text-stone-600">{priceMsg}</p>}{prices.map((p,i)=><div key={i} className="flex items-center justify-between gap-3 rounded-xl border p-3"><div className="flex gap-3"><Sprout className="shrink-0 text-emerald-700" size={20}/><div><b>{p.commodity}{p.variety?` · ${p.variety}`:""}</b><p className="text-xs text-stone-500">{p.market}, {p.district} · {p.arrival_date}</p></div></div><div className="text-right"><b className="text-emerald-900">₹{p.modal_price??"—"}</b><p className="text-xs text-stone-500">per quintal</p><p className="text-[11px] text-stone-500">Min ₹{p.min_price??"—"} · Max ₹{p.max_price??"—"}</p></div></div>)}</div>}<div className="mt-5 rounded-xl bg-lime-50 p-4"><b className="text-emerald-900">Tomorrow's price prediction</b><p className="mt-1 text-sm leading-6 text-stone-600">Coming later: a forecast from historical prices and market arrivals. No prediction is shown until a model is trained and validated.</p></div></div><p className="text-xs leading-5 text-stone-500">Locations from OpenStreetMap may be incomplete. Prices appear only when an official data source is configured. Confirm prices and market hours before travelling.</p></section></div></div></main>}

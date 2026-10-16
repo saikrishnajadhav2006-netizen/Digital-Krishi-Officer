@@ -1,125 +1,61 @@
 import React, { useState, useEffect } from 'react';
-import { Leaf, AlertTriangle, Languages, MessageSquare, Home, Search } from 'lucide-react';
+import { Leaf, AlertTriangle, Languages, MessageSquare, Home, Store } from 'lucide-react';
 import { translations } from '../utils/translations';
 import Link from 'next/link';
-import { usePathname, useSearchParams, useRouter } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 const Header = ({ onLanguageChange }) => {
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const router = useRouter();
     const isChat = searchParams.get('mode') === 'chat';
     const isHome = pathname === '/' && !isChat;
-
     const [userLang, setUserLang] = useState('English');
     const [t, setT] = useState(translations.english);
     const [langInput, setLangInput] = useState('');
-    const [showSwitcher, setShowSwitcher] = useState(false);
-
-    const LANGUAGES = [
-        'English', 'Hindi', 'Telugu', 'Tamil', 'Marathi', 'Spanish'
-    ];
+    const LANGUAGES = ['English', 'Hindi', 'Telugu', 'Tamil', 'Marathi', 'Spanish'];
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('appLanguage') || 'English';
-            setUserLang(saved);
-            setLangInput(saved);
+            setUserLang(saved); setLangInput(saved);
             const langKey = saved.toLowerCase();
-            if (translations[langKey]) {
-                setT(translations[langKey]);
-            }
+            if (translations[langKey]) setT(translations[langKey]);
         }
     }, []);
 
     const handleLanguageChange = (val) => {
         setLangInput(val);
-        const match = LANGUAGES.find(l =>
-            l.toLowerCase() === val.toLowerCase()
-        );
-        if (match) {
-            localStorage.setItem('appLanguage', match);
-            setUserLang(match);
-            const langKey = match.toLowerCase();
-            if (translations[langKey]) {
-                setT(translations[langKey]);
-            }
-
-            if (onLanguageChange) {
-                onLanguageChange(match);
-            } else {
-                window.location.reload();
-            }
-        }
+        const match = LANGUAGES.find(l => l.toLowerCase() === val.toLowerCase());
+        if (!match) return;
+        localStorage.setItem('appLanguage', match); setUserLang(match);
+        const langKey = match.toLowerCase();
+        if (translations[langKey]) setT(translations[langKey]);
+        if (onLanguageChange) onLanguageChange(match);
+        else window.location.reload();
     };
 
     const handleCautionClick = () => {
-        if (t) {
-            alert(`${t.language_assistant}:\n\n${t.caution_msg}`);
-        }
+        if (t) alert(`${t.language_assistant}:\n\n${t.caution_msg}`);
     };
 
+    const navClass = (active) => `flex items-center gap-2 rounded-xl px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${active ? 'bg-white text-agri-darkGreen shadow-md' : 'text-stone-500 hover:text-agri-darkGreen'}`;
+
     return (
-        <header className="flex justify-between items-center p-4 bg-white/80 backdrop-blur-md border-b border-agri-green/20 sticky top-0 z-40 transition-all duration-300">
-            {/* Logo / Home Link */}
-            <Link href="/" className="flex items-center gap-3 animate-slide-down group transition-all">
-                <div className="bg-gradient-to-br from-agri-darkGreen to-agri-green p-2 rounded-xl shadow-lg shadow-agri-green/20 group-hover:scale-110 transition-transform">
-                    <Leaf className="text-white w-6 h-6" />
-                </div>
-                <div>
-                    <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-agri-darkGreen to-agri-green">
-                        AGRIVERSE
-                    </h1>
-                    <p className="text-[10px] text-stone-500 font-bold tracking-[0.2em] uppercase leading-tight">Digital Krishi Officer</p>
-                </div>
+        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-agri-green/20 bg-white/90 p-3 backdrop-blur-md sm:p-4">
+            <Link href="/" className="group flex shrink-0 items-center gap-2 sm:gap-3">
+                <div className="rounded-xl bg-gradient-to-br from-agri-darkGreen to-agri-green p-2 shadow-lg transition-transform group-hover:scale-105"><Leaf className="h-5 w-5 text-white sm:h-6 sm:w-6" /></div>
+                <div><h1 className="bg-gradient-to-r from-agri-darkGreen to-agri-green bg-clip-text text-lg font-bold text-transparent sm:text-xl">AGRIVERSE</h1><p className="text-[9px] font-bold uppercase tracking-[.16em] text-stone-500">Digital Krishi Officer</p></div>
             </Link>
-
-            <div className="flex items-center gap-2 md:gap-4">
-                {/* Navigation Toggle Section */}
-                <div className="hidden md:flex bg-agri-green/5 p-1 rounded-2xl border border-agri-green/10 shadow-inner">
-                    <Link
-                        href="/"
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${isHome ? 'bg-white text-agri-darkGreen shadow-md' : 'text-stone-400 hover:text-agri-darkGreen'
-                            }`}
-                    >
-                        <Home size={14} />
-                        <span>Home</span>
-                    </Link>
-                    <Link
-                        href="/?mode=chat"
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${isChat ? 'bg-agri-green text-agri-darkGreen shadow-md' : 'text-stone-400 hover:text-agri-darkGreen'
-                            }`}
-                    >
-                        <MessageSquare size={14} />
-                        <span>Chat</span>
-                    </Link>
-                </div>
-
-                {/* Language Switcher "Box" */}
-                <div className="relative group flex items-center bg-white border border-stone-200 rounded-xl px-3 py-1.5 shadow-sm focus-within:border-agri-green transition-all">
-                    <Languages size={14} className="text-agri-green mr-2" />
-                    <input
-                        type="text"
-                        className="w-20 md:w-28 bg-transparent outline-none text-[10px] font-bold text-stone-700 uppercase placeholder:text-stone-300"
-                        placeholder="Language..."
-                        value={langInput}
-                        onChange={(e) => handleLanguageChange(e.target.value)}
-                    />
-                </div>
-
-                {/* Caution Icon */}
-                <button
-                    onClick={handleCautionClick}
-                    className="p-2 bg-white text-amber-500 rounded-xl border border-stone-200 hover:border-amber-500 hover:bg-amber-50 transition-all shadow-sm group relative"
-                >
-                    <AlertTriangle size={20} className="animate-pulse" />
-                    <span className="absolute -bottom-10 right-0 bg-stone-900 text-white text-[10px] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap pointer-events-none z-50 shadow-xl translate-y-1 group-hover:translate-y-0">
-                        {t?.language_assistant}
-                    </span>
-                </button>
+            <nav aria-label="Main navigation" className="flex items-center gap-1 rounded-2xl border border-agri-green/10 bg-agri-green/5 p-1">
+                <Link href="/" className={navClass(isHome)}><Home size={14}/><span className="hidden sm:inline">Home</span></Link>
+                <Link href="/?mode=chat" className={navClass(isChat)}><MessageSquare size={14}/><span className="hidden sm:inline">Chat</span></Link>
+                <Link href="/market" className={navClass(pathname === '/market')}><Store size={14}/><span>Mandi</span></Link>
+            </nav>
+            <div className="flex items-center gap-2">
+                <div className="hidden items-center rounded-xl border border-stone-200 bg-white px-2 py-1.5 sm:flex"><Languages size={14} className="mr-2 text-agri-green"/><input aria-label="Language" className="w-20 bg-transparent text-[10px] font-bold uppercase outline-none md:w-24" placeholder="Language" value={langInput} onChange={e => handleLanguageChange(e.target.value)}/></div>
+                <button aria-label="Language assistant information" onClick={handleCautionClick} className="rounded-xl border border-stone-200 bg-white p-2 text-amber-500 transition hover:border-amber-500 hover:bg-amber-50"><AlertTriangle size={19}/></button>
             </div>
         </header>
     );
 };
-
 export default Header;
